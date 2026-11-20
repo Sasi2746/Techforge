@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Techfest 2026-27 | TrueFoundry Forge-a-thon Round 1 Write-up | Team ZENTRIX</title>
+<style>
+    @page {
+        size: A4;
+        margin: 14mm 16mm;
+    }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: #1f2328;
+        line-height: 1.45;
+        font-size: 10.5pt;
+        margin: 0;
+        padding: 0;
+    }
+    .header {
+        border-bottom: 2px solid #0969da;
+        padding-bottom: 8px;
+        margin-bottom: 14px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+    }
+    .header h1 {
+        font-size: 17pt;
+        margin: 0 0 4px 0;
+        color: #0969da;
+    }
+    .header .subtitle {
+        font-size: 9.5pt;
+        color: #57606a;
+        font-weight: 500;
+    }
+    .badge {
+        background: #0969da;
+        color: white;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 8.5pt;
+        font-weight: bold;
+    }
+    h2 {
+        font-size: 11.5pt;
+        color: #24292f;
+        border-bottom: 1px solid #d0d7de;
+        padding-bottom: 3px;
+        margin-top: 14px;
+        margin-bottom: 6px;
+    }
+    p, ul {
+        margin: 4px 0 6px 0;
+    }
+    ul {
+        padding-left: 18px;
+    }
+    li {
+        margin-bottom: 2px;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9pt;
+        margin: 8px 0;
+    }
+    th, td {
+        border: 1px solid #d0d7de;
+        padding: 5px 8px;
+        text-align: left;
+    }
+    th {
+        background-color: #f6f8fa;
+        font-weight: 600;
+    }
+    code {
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+        background: #f6f8fa;
+        padding: 1px 4px;
+        border-radius: 3px;
+        font-size: 9pt;
+    }
+    .box {
+        background: #f6f8fa;
+        border: 1px solid #d0d7de;
+        border-left: 4px solid #0969da;
+        padding: 6px 10px;
+        margin: 6px 0;
+        font-size: 9pt;
+    }
+</style>
+</head>
+<body>
+
+<div class="header">
+    <div>
+        <h1>Techfest 2026-27: TrueFoundry Forge-a-thon</h1>
+        <div class="subtitle">Round 1 Architecture & Technical Submission Write-up</div>
+    </div>
+    <div>
+        <span class="badge">Team ZENTRIX</span>
+    </div>
+</div>
+
+<h2>1. Team</h2>
+<ul>
+    <li><strong>Team Name:</strong> ZENTRIX</li>
+    <li><strong>Members:</strong>
+        <ul>
+            <li><strong>Sasikumar P</strong> &mdash; Systems Engineering, Context Budgeting Engine, Extension Backend</li>
+            <li><strong>Gowtham Kumaresan</strong> &mdash; Diff Review UX, Per-Hunk Staging, MCP Tool Protocol</li>
+            <li><strong>Rithesh S S</strong> &mdash; Resilience Fallback Automation, Model Orchestration, Test Verification</li>
+        </ul>
+    </li>
+    <li><strong>Institution:</strong> Engineering Undergraduate Program</li>
+    <li><strong>Repository:</strong> Public Git repository containing full extension source, build configurations, and test runners</li>
+</ul>
+
+<h2>2. Starting Point</h2>
+<p>
+The extension was constructed <strong>from scratch</strong> using the official VS Code Extension API (v1.120+) and TypeScript, directly consuming the <code>@truefoundry/trueforge-sdk</code>. We engineered custom modules for inline diff decorations, non-destructive virtual hunk staging, and token-bounded context assembly rather than adopting bulky external loop engines, ensuring strict compliance with competition harness boundaries.
+</p>
+
+<h2>3. Architecture on TrueForge</h2>
+<p>
+The extension acts as a native VS Code client communicating with the local TrueForge agent harness over HTTP/SSE:
+</p>
+<ul>
+    <li><strong>Turn Lifecycle:</strong> Turns are dispatched via <code>client.sessions.createTurnStream</code>. Tokens and tool calls stream through Server-Sent Events, rendering directly without blocking the editor UI thread.</li>
+    <li><strong>Editor MCP Tools:</strong> Four workspace primitives are exposed to TrueForge:
+        <code>read_file</code> (range-bounded file reader), <code>search_workspace</code> (regex and pattern scanner),
+        <code>propose_file_edit</code> (stages modifications into in-memory hunks requiring user consent), and
+        <code>run_terminal_command</code> (test and command execution).</li>
+    <li><strong>Tool Approval Driving Diff Review:</strong> TrueForge tool proposals trigger virtual diff hunks. Files remain untouched on disk until the developer explicitly clicks "Accept Hunk" or "Accept All".</li>
+    <li><strong>Context Engineering & Compaction:</strong> Agent definitions configure dynamic context compaction thresholds (16k tokens) and subagent delegation for structured task planning.</li>
+</ul>
+
+<h2>4. How Context is Selected</h2>
+<p>
+A custom <strong>Context Assembly Engine</strong> manages repository information under a strict <strong>32 KB (approx. 8,000 tokens) budget</strong>:
+</p>
+<ul>
+    <li><strong>Explicit Mentions:</strong> The prompt parser identifies <code>@file:&lt;path&gt;</code> and <code>@symbol:&lt;name&gt;</code> tags, guaranteeing priority placement in the context payload.</li>
+    <li><strong>Autonomous Relevance Discovery:</strong> When no files are specified (e.g. Task B), the engine tokenizes task instructions, removes stop-words, and scores workspace files via structural and semantic heuristics (CLI entry points, test suites, documentation files).</li>
+    <li><strong>Budget Partitioning:</strong> 20% system directives/MCP schemas, 55% retrieved source chunks, 15% conversation history, and 10% safety margin. Files are ranked by score and packed greedily until the 32 KB threshold is reached.</li>
+    <li><strong>Audit Transparency:</strong> In Task B, the engine visibly displays the selected files, their sizes, and the exact rationale in the sidebar before code generation begins.</li>
+</ul>
+
+<h2>5. Model Setup</h2>
+<ul>
+    <li><strong>Primary Model:</strong> Local Ollama <code>qwen2.5-coder:7b</code> served via TrueForge's OpenAI-compatible provider at <code>http://localhost:11434/v1</code>.</li>
+    <li><strong>Secondary Fallback Model:</strong> Configured backup endpoint on local Ollama, ensuring automatic failover during Task C.</li>
+    <li><strong>Operational Cost:</strong> $0.00 &mdash; runs fully on local workstation compute.</li>
+    <li><strong>Switching Mechanism:</strong> Configurable via VS Code settings (<code>trueforge.serverUrl</code>) or handled automatically by the client's internal failover handler.</li>
+</ul>
+
+<h2>6. Scorecard</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Criterion</th>
+            <th>Pts</th>
+            <th>Timestamp</th>
+            <th>One-Line Verification Claim</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>A1. Inline Edit</strong></td>
+            <td>10</td>
+            <td>0:12 &ndash; 0:48</td>
+            <td>Inline edit displays editor diff with per-hunk accept/reject; verified via <code>FLASK_DEBUG=off</code> printing <code>False</code>.</td>
+        </tr>
+        <tr>
+            <td><strong>A2. Agent Mode</strong></td>
+            <td>10</td>
+            <td>0:50 &ndash; 2:10</td>
+            <td>Agent autonomously discovers and edits 3 files unprompted (<code>cli.py</code>, <code>test_cli.py</code>, <code>cli.rst</code>).</td>
+        </tr>
+        <tr>
+            <td><strong>A3. Streaming & Cancellation</strong></td>
+            <td>10</td>
+            <td>2:12 &ndash; 2:32</td>
+            <td>Immediate token streaming with instant cancellation via Stop button; workspace remains completely clean.</td>
+        </tr>
+        <tr>
+            <td><strong>B1. Context Assembly</strong></td>
+            <td>15</td>
+            <td>1:02 &ndash; 1:24</td>
+            <td>Retrieved files within 32KB budget; agent explicitly logs selected files and ranking rationale in sidebar.</td>
+        </tr>
+        <tr>
+            <td><strong>B2. Diff Safety</strong></td>
+            <td>10</td>
+            <td>1:45 &ndash; 2:05</td>
+            <td>Per-hunk diff review prevents silent writes; applied changes can be cleanly reverted via working Undo.</td>
+        </tr>
+        <tr>
+            <td><strong>B3. Resilience (Task C)</strong></td>
+            <td>10</td>
+            <td>2:35 &ndash; 3:15</td>
+            <td>Automatic fallback to backup model when endpoint is unreachable; editor stays responsive and git status clean.</td>
+        </tr>
+        <tr>
+            <td><strong>B4. TrueForge Integration</strong></td>
+            <td>10</td>
+            <td>1:10 &ndash; 1:40</td>
+            <td>MCP tools exposed to TrueForge harness with tool approval driving review and compaction configuration active.</td>
+        </tr>
+        <tr>
+            <td><strong>C1. Video Quality</strong></td>
+            <td>10</td>
+            <td>0:00 &ndash; 3:50</td>
+            <td>All three tasks shown in exact order with legible terminals, active verifications, and TrueForge session visible.</td>
+        </tr>
+        <tr>
+            <td><strong>C2. Write-up</strong></td>
+            <td>15</td>
+            <td>&mdash;</td>
+            <td>Follows mandatory eight headings, includes complete scorecard timestamps, design decisions, and limitations.</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2>7. Tools Used</h2>
+<ul>
+    <li><strong>Runtime & Languages:</strong> Node.js v26, TypeScript 7, Python 3.14</li>
+    <li><strong>Build & Bundling:</strong> esbuild, npm / pnpm package management</li>
+    <li><strong>Harness & SDK:</strong> TrueForge Local Server (<code>@truefoundry/trueforge@latest</code>), <code>@truefoundry/trueforge-sdk</code></li>
+    <li><strong>Model Engine:</strong> Ollama serving <code>qwen2.5-coder:7b</code> (quantized 4-bit)</li>
+    <li><strong>Test Environment:</strong> <code>pallets/flask</code> release tag 3.1.3 (commit <code>22d92470</code>), <code>pytest 8.4.2</code></li>
+    <li><strong>AI Assistants:</strong> Antigravity coding assistant used for boilerplate drafting and test harness scaffolding.</li>
+</ul>
+
+<h2>8. Known Limitations & 30-Day Roadmap</h2>
+<ul>
+    <li><strong>Limitations:</strong>
+        <ol>
+            <li>Context ranking currently relies on keyword frequency and path heuristics rather than a live Language Server Protocol (LSP) call-graph.</li>
+            <li>Multi-turn diff resolution handles unified line hunks cleanly, but AST-aware syntactic block transformations would improve resilience against overlapping edits.</li>
+        </ol>
+    </li>
+    <li><strong>Future Roadmap:</strong>
+        <ol>
+            <li><strong>LSP Indexing:</strong> Integrate VS Code semantic symbol providers (<code>vscode.executeDocumentSymbolProvider</code>) for AST-level context pruning.</li>
+            <li><strong>Multi-Agent Verification:</strong> Introduce a background reviewer subagent that automatically runs <code>pytest</code> in a sandboxed worktree before prompting the developer.</li>
+        </ol>
+    </li>
+</ul>
+
+</body>
+</html>

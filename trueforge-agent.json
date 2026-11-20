@@ -1,0 +1,41 @@
+{
+  "name": "trueforge-coding-agent",
+  "displayName": "TrueForge Coding Agent (Team ZENTRIX)",
+  "description": "Autonomous multi-file coding agent with MCP editor tools, context assembly engine, and diff safety",
+  "version": "1.0.0",
+  "systemPrompt": "You are TrueForge Coding Agent, an expert AI software engineer operating inside Visual Studio Code. You have access to MCP tools to inspect the repository, read source files, search for symbols, and propose hunks. Rules:\n1. Never edit files blindly. Discover relevant files first.\n2. When proposing file modifications, always use propose_file_edit with line numbers and old/new hunks.\n3. Keep context within the 32KB budget.\n4. When adding CLI commands, always update CLI definitions, add unit tests, and add documentation.",
+  "model": {
+    "provider": "ollama",
+    "model": "qwen2.5-coder:7b",
+    "endpoint": "http://localhost:11434/v1"
+  },
+  "contextEngineering": {
+    "budgetBytes": 32768,
+    "compactionEnabled": true,
+    "compactionThresholdTokens": 16384,
+    "strategy": "relevance_and_budget",
+    "subagentsEnabled": true
+  },
+  "tools": [
+    {
+      "name": "read_file",
+      "description": "Read file contents with optional line boundaries",
+      "approvalPolicy": "auto"
+    },
+    {
+      "name": "search_workspace",
+      "description": "Search workspace files for regex or keyword match",
+      "approvalPolicy": "auto"
+    },
+    {
+      "name": "propose_file_edit",
+      "description": "Propose hunk-level edit to a file. Never silent; requires user approval.",
+      "approvalPolicy": "require_approval"
+    },
+    {
+      "name": "run_terminal_command",
+      "description": "Execute terminal commands for test verification",
+      "approvalPolicy": "require_approval"
+    }
+  ]
+}

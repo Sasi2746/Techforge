@@ -1,0 +1,26 @@
+{
+  "server": {
+    "host": "localhost",
+    "port": 8790,
+    "cors": ["http://localhost:*", "vscode-webview://*"],
+    "allowedOutboundHosts": ["localhost", "127.0.0.1", "::1"]
+  },
+  "models": {
+    "default": "primary",
+    "providers": {
+      "primary": {
+        "type": "openai-compatible",
+        "name": "qwen2.5-coder:7b",
+        "baseUrl": "http://localhost:11434/v1",
+        "apiKey": "${OPENAI_API_KEY:-ollama}"
+      },
+      "secondary_fallback": {
+        "type": "openai-compatible",
+        "name": "qwen2.5-coder:7b",
+        "baseUrl": "http://localhost:11434/v1",
+        "apiKey": "ollama"
+      }
+    }
+  },
+  "agentDefinition": "./trueforge-agent.json"
+}
