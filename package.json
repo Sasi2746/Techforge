@@ -1,0 +1,89 @@
+{
+  "name": "trueforge-coding-agent",
+  "displayName": "TrueForge Coding Agent",
+  "description": "An editor-native AI coding agent powered by TrueForge",
+  "version": "0.1.0",
+  "publisher": "your-team",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.124.0"
+  },
+  "main": "./dist/extension.js",
+  "scripts": {
+    "compile": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "check-types": "tsc --noEmit",
+    "vscode:prepublish": "npm run compile"
+  },
+  "activationEvents": [
+    "onView:trueforge.agent",
+    "onCommand:trueforge-agent.inlineEdit"
+  ],
+  "categories": [
+    "Other",
+    "AI"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "trueforge",
+          "title": "TrueForge",
+          "icon": "resources/trueforge.svg"
+        }
+      ]
+    },
+    "views": {
+      "trueforge": [
+        {
+          "type": "webview",
+          "id": "trueforge.agent",
+          "name": "AI Agent"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "trueforge-agent.open",
+        "title": "TrueForge: Open AI Agent"
+      },
+      {
+        "command": "trueforge-agent.inlineEdit",
+        "title": "TrueForge: Inline Edit"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "trueforge-agent.inlineEdit",
+        "key": "ctrl+alt+i",
+        "mac": "cmd+alt+i",
+        "when": "editorTextFocus"
+      }
+    ],
+    "configuration": {
+      "title": "TrueForge Coding Agent",
+      "properties": {
+        "trueforge.serverUrl": {
+          "type": "string",
+          "default": "http://localhost:8790",
+          "description": "Local TrueForge server URL"
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "@truefoundry/trueforge-sdk": "^0.185.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/vscode": "^1.120.0",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^4.1.1",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "@vscode/vsce-sign@2.1.1": true
+  }
+}
